@@ -87,7 +87,7 @@ Detected project configuration:
   Terraform:         Yes (*.tf files found)
   Existing CI:       None (or list existing files)
 
-Is this correct? (yes / describe corrections)
+Is this correct? If not, describe any corrections (e.g. "package manager is pip, not uv").
 ```
 
 Wait for user confirmation before proceeding to Phase 2.
@@ -287,7 +287,8 @@ Same as pip variant but replace setup and install steps with:
         with:
           python-version: "3.12"
       - name: Install Poetry
-        run: pip install poetry
+        # Pin to a specific version for reproducibility, e.g. "poetry==2.1.3"
+        run: pip install "poetry>=2.0,<3.0"
       - name: Install dependencies
         run: poetry install --with dev
       - name: Lint with Ruff
@@ -440,7 +441,7 @@ Same as the npm + Biome or npm + ESLint templates, but replace `actions/setup-no
 ```yaml
       - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e  # v4.3.0
         with:
-          node-version-file: .nvmrc
+          node-version-file: .nvmrc  # or: node-version: "22"
           cache: yarn
       - name: Install dependencies
         run: yarn install --frozen-lockfile
@@ -454,7 +455,7 @@ Same as the npm + Biome or npm + ESLint templates, but replace `actions/setup-no
           run_install: false
       - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e  # v4.3.0
         with:
-          node-version-file: .nvmrc
+          node-version-file: .nvmrc  # or: node-version: "22"
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -540,9 +541,13 @@ jobs:
         uses: github/codeql-action/init@45ef7ffa9d96ffa67d0064b2ef91fb6b2e0bf0e2  # v3.28.13
         with:
           languages: ${{ matrix.language }}
-          # Security scan failure policy: ADVISORY (only critical/high alerts are errors)
-          # Change to 'error' for STRICT mode (any alert = CI failure)
-          # Change to 'none' for LOG-ONLY mode
+          # `queries:` controls which rule suite runs:
+          #   security-extended         = ADVISORY / LOG-ONLY  (default, broad security rules)
+          #   security-and-quality      = STRICT               (adds quality rules, wider coverage)
+          # NOTE: CodeQL never fails the action itself based on alert count.
+          # Alerts always appear in the GitHub Security tab.
+          # To block PR merges on CodeQL findings, enable "Code scanning" in branch protection rules
+          # and configure the severity threshold in repository Settings > Code security.
           queries: security-extended
       - name: Autobuild
         uses: github/codeql-action/autobuild@45ef7ffa9d96ffa67d0064b2ef91fb6b2e0bf0e2  # v3.28.13
@@ -781,17 +786,19 @@ Before writing files, substitute these values from Phase 1 detection:
 
 **Advisory (default):**
 
-- CodeQL: keep `queries: security-extended` (alerts appear in Security tab but don't block)
+- CodeQL: `queries: security-extended` — alerts appear in Security tab, CI never fails on findings
 - Trivy: `exit-code: "0"`, `severity: "CRITICAL,HIGH"`
 
 **Strict:**
 
-- CodeQL: use `queries: security-and-quality`
-- Trivy: `exit-code: "1"`, `severity: "CRITICAL,HIGH,MEDIUM"`
+- CodeQL: `queries: security-and-quality` — broader rule coverage; alerts still only appear in Security tab.
+  To actually block PR merges, configure branch protection rules to require the "CodeQL" status check
+  and set the alert severity threshold in repository Settings → Code security → Code scanning.
+- Trivy: `exit-code: "1"`, `severity: "CRITICAL,HIGH,MEDIUM"` — Trivy **does** fail the action directly
 
 **Log-only:**
 
-- CodeQL: `queries: security-extended`, no additional flags
+- CodeQL: `queries: security-extended`, no change — findings visible in Security tab only
 - Trivy: `exit-code: "0"`, `severity: "CRITICAL,HIGH,MEDIUM,LOW"`
 
 ### Step 4: Check for existing workflows
