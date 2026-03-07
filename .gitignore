@@ -1,0 +1,36 @@
+# 環境変数
+.env
+.env.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+dist/
+.pytest_cache/
+
+# Node.js
+node_modules/
+.next/
+dist/
+
+# macOS
+.DS_Store
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+
+# IDE
+.idea/
+.vscode/
+
+# mise local override
+.mise.local.toml
+
+# Claude Code ローカル設定（権限設定はローカル専用）
+.claude/settings.local.json
