@@ -170,3 +170,33 @@ src/db/         → DB チームメイト
 tests/          → テスト チームメイト
 {skill-name}/   → skill-{name} チームメイト（各スキルは独立ディレクトリ）
 ```
+
+## 利用可能なスキル
+
+プロジェクトローカル（`.claude/skills/`）に以下のスキルがインストール済み。スラッシュコマンドで起動する。
+
+### 独自スキル
+
+| コマンド | 説明 |
+|---|---|
+| `/code-review <path>` | 5人の専門家エージェントが並列でコードレビューを実施し、`.claude/reviews/` にレポートを保存 |
+| `/gcp-expert [質問]` | GCP サービス選定・実装パターン・セキュリティベストプラクティスをアドバイス |
+
+### コミュニティスキル（skills.sh 経由）
+
+| コマンド | 説明 | 出典 |
+|---|---|---|
+| `/systematic-debugging` | 4フェーズの体系的デバッグ（根本原因調査→パターン分析→仮説検証→実装） | obra/superpowers |
+| `/git-commit` | Conventional Commits 仕様に基づいたコミットメッセージを自動生成 | github/awesome-copilot |
+| `/requesting-code-review` | コードレビュー依頼を自動化・優先度分類（Critical/Important/Minor） | obra/superpowers |
+| `/gh-cli` | GitHub CLI の包括的リファレンス（PR・Issue・Actions 等） | github/awesome-copilot |
+| `/skill-creator` | 新しいスキルの SKILL.md を対話的に生成・改善 | anthropics/skills |
+
+### スキルの管理
+
+```sh
+npx skills list      # インストール済みスキル一覧
+npx skills update    # 全スキルを最新版に更新
+npx skills check     # アップデート確認
+npx skills add <owner/repo@skill>  # 新規スキルを追加
+```
