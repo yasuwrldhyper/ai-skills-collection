@@ -34,3 +34,4 @@ dist/
 
 # Claude Code ローカル設定（権限設定はローカル専用）
 .claude/settings.local.json
+.claude/plans
