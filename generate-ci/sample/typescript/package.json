@@ -1,0 +1,16 @@
+{
+  "name": "sample-ts-app",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run --coverage",
+    "lint": "biome check .",
+    "format": "biome format ."
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@biomejs/biome": "^1.9.0",
+    "vitest": "^2.0.0",
+    "@vitest/coverage-v8": "^2.0.0"
+  }
+}

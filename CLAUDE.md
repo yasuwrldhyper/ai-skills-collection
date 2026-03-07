@@ -57,7 +57,7 @@ biome format .        # フォーマット
 
 ## プロジェクト構造
 
-```
+```text
 /
 ├── plan/             # 設計・計画ドキュメント
 ├── .claude/          # Claude Code 設定
@@ -119,7 +119,7 @@ aws <service> describe-* # 許可
 
 ### ワークフロー
 
-```
+```text
 1. TeamCreate        — チームとタスクリストを作成
 2. TaskCreate        — タスクを定義（複数）
 3. Agent(team_name, name, subagent_type)  — チームメイトを spawn
@@ -133,7 +133,7 @@ aws <service> describe-* # 許可
 
 **パターン1: 研究＋実装分離**（新規スキル実装時）
 
-```
+```text
 researcher  : Explore         — 仕様調査・既存実装の収集
 implementer : general-purpose — 実装・テスト作成
 reviewer    : general-purpose — コードレビュー・README 作成
@@ -141,7 +141,7 @@ reviewer    : general-purpose — コードレビュー・README 作成
 
 **パターン2: 並列スキル実装**（複数スキルを同時開発）
 
-```
+```text
 skill-{name1} : general-purpose — {skill-name1}/ ディレクトリ担当
 skill-{name2} : general-purpose — {skill-name2}/ ディレクトリ担当
 skill-{name3} : general-purpose — {skill-name3}/ ディレクトリ担当
@@ -149,14 +149,14 @@ skill-{name3} : general-purpose — {skill-name3}/ ディレクトリ担当
 
 **パターン3: 競合仮説バグ調査**（根本原因不明のバグ）
 
-```
+```text
 仮説ごとにチームメイトを spawn（3〜5人）
 各自が独立して検証し、SendMessage で議論して収束
 ```
 
 **パターン4: 並列コードレビュー**（多角的品質チェック）
 
-```
+```text
 sec-reviewer   : general-purpose — セキュリティ視点
 perf-reviewer  : general-purpose — パフォーマンス視点
 test-reviewer  : general-purpose — テストカバレッジ視点
@@ -164,7 +164,7 @@ test-reviewer  : general-purpose — テストカバレッジ視点
 
 ### ファイル責務分離
 
-```
+```text
 src/api/        → API チームメイト
 src/db/         → DB チームメイト
 tests/          → テスト チームメイト
@@ -178,14 +178,15 @@ tests/          → テスト チームメイト
 ### 独自スキル
 
 | コマンド | 説明 |
-|---|---|
+| --- | --- |
 | `/code-review <path>` | 5人の専門家エージェントが並列でコードレビューを実施し、`.claude/reviews/` にレポートを保存 |
 | `/gcp-expert [質問]` | GCP サービス選定・実装パターン・セキュリティベストプラクティスをアドバイス |
+| `/generate-ci [path]` | 言語・IaC を自動検出し、GitHub Actions CI ワークフローをベストプラクティス（SHA固定・最小権限・カバレッジ可視化・シークレットスキャン）に基づいて対話的に生成 |
 
 ### コミュニティスキル（skills.sh 経由）
 
 | コマンド | 説明 | 出典 |
-|---|---|---|
+| --- | --- | --- |
 | `/systematic-debugging` | 4フェーズの体系的デバッグ（根本原因調査→パターン分析→仮説検証→実装） | obra/superpowers |
 | `/git-commit` | Conventional Commits 仕様に基づいたコミットメッセージを自動生成 | github/awesome-copilot |
 | `/requesting-code-review` | コードレビュー依頼を自動化・優先度分類（Critical/Important/Minor） | obra/superpowers |
