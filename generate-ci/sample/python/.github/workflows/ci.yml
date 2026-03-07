@@ -9,6 +9,8 @@ on:
   push:
     branches: [main]
 
+permissions: {}  # Restrict default GITHUB_TOKEN; each job sets its own minimum permissions
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true

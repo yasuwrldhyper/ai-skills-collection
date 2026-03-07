@@ -13,6 +13,8 @@ on:
     - cron: "0 2 * * *"  # Daily at 02:00 UTC
   workflow_dispatch:
 
+permissions: {}  # Restrict default GITHUB_TOKEN; each job sets its own minimum permissions
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   # Do NOT cancel scheduled runs (they monitor for newly disclosed CVEs).

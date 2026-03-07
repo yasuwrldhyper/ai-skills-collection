@@ -92,6 +92,7 @@ Present the detection summary to the user in this format:
 Detected project configuration:
   Language(s):       Python + Terraform  (or whatever was found)
   Package manager:   uv
+  Python version:    3.12  (from mise.toml / requires-python / default)
   Test framework:    pytest
   Linter:            Ruff
   Source directory:  src/
@@ -116,10 +117,10 @@ Split into two calls if needed:
 **Call 1** (CI steps + workflow structure):
 
 - Question 1 — "Which CI steps would you like? (select all that apply)" `multiSelect: true`
-  - "Lint + Test + Build (essential)"
+  - "Lint + Test + Build + actionlint (essential; always recommended)"
   - "Secret scanning (gitleaks)"
   - "SAST (CodeQL + Trivy)"
-  - "Dependency audit + actionlint + PR title check"
+  - "Dependency audit + PR title check"
 - Question 2 — "Workflow file structure?" (2 options)
   - "Separate files: ci.yml + security.yml (recommended)"
   - "Single file: ci.yml"
@@ -134,7 +135,8 @@ Split into two calls if needed:
   - "Private / internal (default)"
   - "Public (enables fork PR support)"
 
-Then ask security policy as a follow-up call if needed:
+Ask security policy as a follow-up call when option 1 includes SAST (i.e., user selected "SAST"
+or all options):
 
 - "Security scan failure policy?" (3 options)
   - "Advisory — CRITICAL findings appear in Security tab, CI never fails (recommended)"
@@ -148,14 +150,10 @@ structure choice.
 Please answer the following to configure your CI:
 
 1. Which CI steps do you want? (default: all)
-   - [x] Lint / Format check
-   - [x] Test with coverage (PR comment)
-   - [x] Build verification
+   - [x] Lint + Test + Build + actionlint (essential; always recommended)
    - [x] Secret scanning (gitleaks)
    - [x] SAST (CodeQL + Trivy)
-   - [x] Dependency audit
-   - [x] Actions out-of-date check (actionlint)
-   - [x] Conventional Commits / PR title check
+   - [x] Dependency audit + PR title check
    Uncheck any you don't need.
 
 2. Workflow file structure:
@@ -172,10 +170,10 @@ Please answer the following to configure your CI:
    a) Private / internal [default]
    b) Public (enables fork PR support with restricted permissions)
 
-5. Security scan failure policy:
-   a) Advisory - only CRITICAL findings block CI [recommended for new projects]
-   b) Strict - any finding blocks CI
-   c) Log-only - results visible but never block CI
+5. Security scan failure policy: (asked only when SAST is selected)
+   a) Advisory - findings appear in Security tab, CI never fails [recommended]
+   b) Strict - Trivy fails CI directly; CodeQL requires branch protection rule
+   c) Log-only - all findings visible in Security tab, CI never fails
 ```
 
 Wait for user responses before proceeding to Phase 3.
@@ -189,7 +187,8 @@ Based on Phase 1 detection and Phase 2 answers, generate the workflow files usin
 **Important security rules for ALL generated workflows:**
 
 - Pin ALL third-party Actions to their git SHA hash, with a version comment
-- Specify `permissions:` on each job individually (never at workflow level alone)
+- Add `permissions: {}` at the workflow level to restrict default GITHUB_TOKEN to read-only;
+  then specify the minimum required `permissions:` on each job individually
 - Always include `concurrency: cancel-in-progress: true` (use `${{ github.event_name == 'pull_request' }}` for `security.yml` that has a `schedule` trigger, to avoid cancelling scheduled CVE scans)
 - Always include `timeout-minutes` on every job
 - Use `hashFiles()` in all cache keys
@@ -213,6 +212,8 @@ on:
   pull_request:
   push:
     branches: [main]
+
+permissions: {}  # Restrict default GITHUB_TOKEN; each job sets its own minimum permissions
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -425,6 +426,8 @@ on:
   push:
     branches: [main]
 
+permissions: {}  # Restrict default GITHUB_TOKEN; each job sets its own minimum permissions
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -583,6 +586,8 @@ on:
     - cron: "0 2 * * *"  # Daily at 02:00 UTC
   workflow_dispatch:
 
+permissions: {}  # Restrict default GITHUB_TOKEN; each job sets its own minimum permissions
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   # Do NOT cancel scheduled runs (they monitor for newly disclosed CVEs).
@@ -615,6 +620,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       # --- Python (uv) ---
+      # Requires: uv add pip-audit --dev
       # - uses: astral-sh/setup-uv@f0ec1fc3b38f5e7cd731bb6ce540c5af426746bb  # v5.4.0
       # - run: uv sync && uv run pip-audit
       # --- Python (pip) ---
@@ -622,6 +628,7 @@ jobs:
       #   with: { python-version: "3.12", cache: pip }
       # - run: pip install -e .[dev] pip-audit && pip-audit
       # --- Python (poetry) ---
+      # Requires: poetry add pip-audit --group dev
       # - uses: actions/setup-python@0b93645bdc8f3c7c6f8d3cf81c2a3a0e5e68a3a3  # v5.3.0
       #   with: { python-version: "3.12" }
       # - run: pip install "poetry>=2.0,<3.0" && poetry install --with dev && poetry run pip-audit
@@ -630,6 +637,7 @@ jobs:
       #   with: { node-version-file: .nvmrc, cache: npm }
       # - run: npm ci && npm audit --audit-level=high
       # --- Node.js (yarn) ---
+      # Note: yarn audit is yarn v1 only; yarn v2+ (berry) does not support this command
       # - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e  # v4.3.0
       #   with: { node-version-file: .nvmrc, cache: yarn }
       # - run: yarn install --frozen-lockfile && yarn audit --level high
@@ -730,6 +738,8 @@ on:
     paths:
       - "**.tf"
 
+permissions: {}  # Restrict default GITHUB_TOKEN; each job sets its own minimum permissions
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -791,6 +801,17 @@ jobs:
         if: always()
         with:
           sarif_file: trivy-iac.sarif
+
+  actionlint:
+    name: Lint GitHub Actions workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Run actionlint
+        uses: raven-actions/actionlint@3a10a4f81f7bb6af5be900e2e6b0c9c1a94cc428  # v2.0.0
 ```
 
 ---
