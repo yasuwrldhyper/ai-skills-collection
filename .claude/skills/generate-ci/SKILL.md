@@ -51,6 +51,12 @@ For Python linter, check `pyproject.toml`:
 - `[tool.ruff]` section present → **Ruff**
 - default → **Ruff** (recommended)
 
+For Python version, check in order:
+
+- `mise.toml` `[tools] python = "X.Y"` → use that version
+- `pyproject.toml` `[project] requires-python = ">=X.Y"` → use that minimum version
+- Neither found → default to `"3.12"`
+
 For Python test framework, check `pyproject.toml` for `[tool.pytest]` or `[tool.pytest.ini_options]` → **pytest**. Otherwise assume **pytest** as default.
 
 For Node.js/TypeScript test framework, read `package.json` scripts and devDependencies:
@@ -101,7 +107,42 @@ Wait for user confirmation before proceeding to Phase 2.
 
 ## Phase 2: Interactive CI Configuration
 
-Ask the user a series of questions to configure the CI. Ask them together in a single message.
+Ask the user a series of questions to configure the CI.
+
+**Implementation note**: Use the AskUserQuestion tool for interactive questions. The tool supports
+at most 4 questions per call, with at most 4 options per question.
+Split into two calls if needed:
+
+**Call 1** (CI steps + workflow structure):
+
+- Question 1 — "Which CI steps would you like? (select all that apply)" `multiSelect: true`
+  - "Lint + Test + Build (essential)"
+  - "Secret scanning (gitleaks)"
+  - "SAST (CodeQL + Trivy)"
+  - "Dependency audit + actionlint + PR title check"
+- Question 2 — "Workflow file structure?" (2 options)
+  - "Separate files: ci.yml + security.yml (recommended)"
+  - "Single file: ci.yml"
+
+**Call 2** (dependency management + visibility + security policy):
+
+- Question 3 — "Dependency management automation?" (3 options)
+  - "Renovate (recommended)"
+  - "Dependabot (GitHub native)"
+  - "Skip"
+- Question 4 — "Repository visibility?" (2 options)
+  - "Private / internal (default)"
+  - "Public (enables fork PR support)"
+
+Then ask security policy as a follow-up call if needed:
+
+- "Security scan failure policy?" (3 options)
+  - "Advisory — CRITICAL findings appear in Security tab, CI never fails (recommended)"
+  - "Strict — Trivy exits with error on CRITICAL/HIGH/MEDIUM; CodeQL requires branch protection rule"
+  - "Log-only — all findings visible in Security tab, CI never fails"
+
+For Terraform-only projects: always generate `terraform.yml` separately regardless of workflow
+structure choice.
 
 ```text
 Please answer the following to configure your CI:
@@ -324,22 +365,34 @@ The `actionlint` job is identical to the uv variant.
 
 ### Template: ci.yml (Python + poetry)
 
-Same as pip variant but replace setup and install steps with:
+Generate the same structure as the uv variant, but replace setup/install/run steps in each job.
+The common setup block for all poetry jobs:
 
 ```yaml
       - uses: actions/setup-python@0b93645bdc8f3c7c6f8d3cf81c2a3a0e5e68a3a3  # v5.3.0
         with:
           python-version: "3.12"
+          # Note: cache: pip is not available for Poetry; omit or use actions/cache manually:
+          # key: poetry-${{ hashFiles('poetry.lock') }}
       - name: Install Poetry
         # Pin to a specific version for reproducibility, e.g. "poetry==2.1.3"
         run: pip install "poetry>=2.0,<3.0"
       - name: Install dependencies
         run: poetry install --with dev
+```
+
+**Lint job** — after the common setup block, add:
+
+```yaml
       - name: Lint with Ruff
         run: poetry run ruff check --output-format=github .
       - name: Format check with Ruff
         run: poetry run ruff format --check .
-      # In the test job, replace run commands with:
+```
+
+**Test job** — after the common setup block, replace the pytest step with:
+
+```yaml
       - name: Run tests with coverage
         run: |
           poetry run pytest \
@@ -348,13 +401,16 @@ Same as pip variant but replace setup and install steps with:
             --cov-report=xml:coverage.xml \
             --cov-report=term-missing \
             --junitxml=test-results.xml
-      # In the build job:
+```
+
+**Build job** — after the common setup block, replace the build step with:
+
+```yaml
       - name: Build package
         run: poetry build
 ```
 
-> **Note:** Poetry does not support `cache: pip` in `actions/setup-python`. Omit the `cache:` key or use
-> `actions/cache` manually with `key: poetry-${{ hashFiles('poetry.lock') }}`.
+The `actionlint` job is identical to the uv variant.
 
 ---
 
@@ -565,11 +621,24 @@ jobs:
       # - uses: actions/setup-python@0b93645bdc8f3c7c6f8d3cf81c2a3a0e5e68a3a3  # v5.3.0
       #   with: { python-version: "3.12", cache: pip }
       # - run: pip install -e .[dev] pip-audit && pip-audit
-      # --- Node.js ---
+      # --- Python (poetry) ---
+      # - uses: actions/setup-python@0b93645bdc8f3c7c6f8d3cf81c2a3a0e5e68a3a3  # v5.3.0
+      #   with: { python-version: "3.12" }
+      # - run: pip install "poetry>=2.0,<3.0" && poetry install --with dev && poetry run pip-audit
+      # --- Node.js (npm) ---
       # - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e  # v4.3.0
       #   with: { node-version-file: .nvmrc, cache: npm }
       # - run: npm ci && npm audit --audit-level=high
-      # (Uncomment the block matching your language)
+      # --- Node.js (yarn) ---
+      # - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e  # v4.3.0
+      #   with: { node-version-file: .nvmrc, cache: yarn }
+      # - run: yarn install --frozen-lockfile && yarn audit --level high
+      # --- Node.js (pnpm) ---
+      # - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddde  # v4.1.0
+      # - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e  # v4.3.0
+      #   with: { node-version-file: .nvmrc, cache: pnpm }
+      # - run: pnpm install --frozen-lockfile && pnpm audit --audit-level high
+      # (Uncomment the block matching your language and package manager)
 
   sast:
     name: SAST (CodeQL)
@@ -809,7 +878,7 @@ Based on Phase 2 choices, decide which files to create:
 | TypeScript + yarn + ESLint | `ci.yml` (TypeScript + npm + ESLint variant, substituting yarn steps per yarn template block) |
 | TypeScript + pnpm + Biome | `ci.yml` (TypeScript + npm + Biome variant, substituting pnpm steps per pnpm template block) |
 | TypeScript + pnpm + ESLint | `ci.yml` (TypeScript + npm + ESLint variant, substituting pnpm steps per pnpm template block) |
-| Node.js (no TypeScript) | Same as TypeScript variant; use `javascript` for CodeQL language; remove TypeScript-specific steps |
+| Node.js (no TypeScript) | Same as TypeScript variant; set CodeQL language to `javascript`; omit `tsc` build steps and any `tsconfig.json` references |
 | Terraform detected | `terraform.yml` |
 | Security steps selected | `security.yml` |
 | Renovate selected | `renovate.json` |
