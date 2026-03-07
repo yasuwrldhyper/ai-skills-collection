@@ -15,6 +15,11 @@ Follow each phase sequentially. Ask the user for confirmation before generating 
 
 ## Phase 1: Project Auto-Detection
 
+> **Scope limitation**: This skill targets single-package repositories.
+> Monorepos (multiple `package.json` / `pyproject.toml` at different directory levels,
+> or workspaces configured in `package.json`) are **not supported**.
+> If a monorepo is detected, inform the user and stop — do not attempt to generate CI files.
+
 Use Glob and Read tools to detect the project's language, package manager, and existing CI setup.
 
 ### 1-1. Detect project root
@@ -58,6 +63,13 @@ For Python version, check in order:
 - Neither found → default to `"3.12"`
 
 For Python test framework, check `pyproject.toml` for `[tool.pytest]` or `[tool.pytest.ini_options]` → **pytest**. Otherwise assume **pytest** as default.
+
+For Node.js/TypeScript version, check in order:
+
+- `.nvmrc` file present → use `node-version-file: .nvmrc`
+- `mise.toml` `[tools] node = "X"` → use `node-version: "X"`
+- `package.json` `engines.node` field → use that version
+- Neither found → default to `node-version: "22"` (current LTS)
 
 For Node.js/TypeScript test framework, read `package.json` scripts and devDependencies:
 
@@ -310,12 +322,33 @@ jobs:
 
 ### Template: ci.yml (Python + pip)
 
-Generate the same top-level structure as the uv variant (same `on:`, `concurrency:`, job names, and
-`actionlint` job), but replace all `astral-sh/setup-uv` and `uv` steps in each job as follows:
-
-**Lint job** — replace setup-uv steps with:
-
 ```yaml
+# .github/workflows/ci.yml
+# Actions versions are pinned to SHA for security.
+# Dependabot/Renovate will keep them up to date automatically.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}  # Restrict default GITHUB_TOKEN; each job sets its own minimum permissions
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       - uses: actions/setup-python@0b93645bdc8f3c7c6f8d3cf81c2a3a0e5e68a3a3  # v5.3.0
         with:
           python-version: "3.12"
@@ -326,17 +359,24 @@ Generate the same top-level structure as the uv variant (same `on:`, `concurrenc
         run: python -m ruff check --output-format=github .
       - name: Format check with Ruff
         run: python -m ruff format --check .
-```
 
-**Test job** — replace setup-uv, `uv sync`, and `uv run pytest` steps with:
-
-```yaml
+  test:
+    name: Test & Coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write  # Required for PR coverage comment
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       - uses: actions/setup-python@0b93645bdc8f3c7c6f8d3cf81c2a3a0e5e68a3a3  # v5.3.0
         with:
           python-version: "3.12"
           cache: pip
       - name: Install dependencies
         run: pip install -e .[dev]
+      # NOTE: --cov=src measures ALL files in src/, including untested ones (shown as 0%)
+      # This gives an honest picture of total coverage. Adjust --cov=<your-src-dir> if needed.
       - name: Run tests with coverage
         run: |
           python -m pytest \
@@ -345,11 +385,28 @@ Generate the same top-level structure as the uv variant (same `on:`, `concurrenc
             --cov-report=xml:coverage.xml \
             --cov-report=term-missing \
             --junitxml=test-results.xml
-```
+      - name: Upload coverage report
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b  # v4.5.0
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage.xml
+          retention-days: 7
+      - name: Post coverage comment on PR
+        if: github.event_name == 'pull_request'
+        uses: MishaKav/pytest-coverage-comment@81882822c5cd55bc8e856418ecb60c5c45c11247  # v1.1.52
+        with:
+          pytest-xml-coverage-path: coverage.xml
+          junitxml-path: test-results.xml
 
-**Build job** — replace setup-uv and `uv build` steps with:
-
-```yaml
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       - uses: actions/setup-python@0b93645bdc8f3c7c6f8d3cf81c2a3a0e5e68a3a3  # v5.3.0
         with:
           python-version: "3.12"
@@ -358,9 +415,18 @@ Generate the same top-level structure as the uv variant (same `on:`, `concurrenc
         run: pip install build
       - name: Build package
         run: python -m build
-```
 
-The `actionlint` job is identical to the uv variant.
+  actionlint:
+    name: Lint GitHub Actions workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Run actionlint
+        uses: raven-actions/actionlint@3a10a4f81f7bb6af5be900e2e6b0c9c1a94cc428  # v2.0.0
+```
 
 ---
 
@@ -818,6 +884,12 @@ jobs:
 
 ### Template: renovate.json
 
+> **Note on `group:allNonMajor`**: This preset bundles all non-major updates into a single weekly PR,
+> which reduces PR noise but makes it harder to isolate regressions caused by individual dependency
+> updates. If the user prefers fine-grained PRs (one per package), remove `"group:allNonMajor"` from
+> `extends`. Ask the user during Phase 2 if they have a preference, or default to grouped (recommended
+> for most projects).
+
 ```json
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
@@ -905,7 +977,16 @@ Based on Phase 2 choices, decide which files to create:
 | Renovate selected | `renovate.json` |
 | Dependabot selected | `.github/dependabot.yml` |
 
-If both Python and TypeScript are detected in the same project, generate a combined `ci.yml` with separate jobs for each language.
+**Combined projects (Python + Terraform):**
+If both Python and Terraform are detected, generate both `ci.yml` (Python variant) and `terraform.yml` as separate files.
+Do NOT merge them into a single file — keeping them separate allows independent triggering via `paths` filters.
+
+**Combined projects (Python + TypeScript):**
+If both Python and TypeScript are detected in the same repository, generate a single `ci.yml` that contains separate jobs for each language:
+- Python jobs: `lint-python`, `test-python`, `build-python`
+- TypeScript jobs: `lint-ts`, `test-ts`, `build-ts`
+- One shared `actionlint` job at the end
+Use the respective language templates for each job group's steps.
 
 ### Step 2: Customize templates
 
@@ -916,7 +997,8 @@ Before writing files, substitute these values from Phase 1 detection:
 - For **pnpm**: add `pnpm/action-setup` before `actions/setup-node`; replace `cache: npm` → `cache: pnpm`; `npm ci` → `pnpm install --frozen-lockfile`; `npm run` → `pnpm run`
 - Source directory in `--cov=<src_dir>` and `coverage.include`
 - Python version from `mise.toml` or `pyproject.toml` requires-python
-- Node.js version from `.nvmrc`, `mise.toml`, or `package.json` `engines.node`
+- Node.js version: if `.nvmrc` exists → `node-version-file: .nvmrc`; otherwise → `node-version: "<detected-version>"` (fallback: `"22"`)
+  Remove the `node-version-file` key from templates if `.nvmrc` is absent
 - CodeQL language (`python`, `javascript`, `typescript`)
 - If repository is **Public**, add this to fork PR-sensitive jobs (coverage comment):
 
@@ -982,4 +1064,15 @@ After writing all files, display a summary:
    4. If using Dependabot: no extra setup needed, it's GitHub native
    5. For gitleaks Community license: GITLEAKS_LICENSE secret is optional
    6. Check the GitHub Security tab after first security.yml run
+
+💡 Optional optimizations (not applied by default):
+   - Add `paths:` filters to ci.yml to skip runs on doc-only changes:
+       on:
+         pull_request:
+           paths: ['src/**', 'tests/**', 'pyproject.toml', 'package.json']
+         push:
+           branches: [main]
+           paths: ['src/**', 'tests/**', 'pyproject.toml', 'package.json']
+   - terraform.yml already uses paths filters for *.tf files (no change needed)
+   - Remove "group:allNonMajor" from renovate.json for per-package PRs
 ```
