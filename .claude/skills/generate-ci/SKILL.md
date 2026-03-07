@@ -2,7 +2,7 @@
 name: generate-ci
 description: Interactively generates GitHub Actions CI workflow files based on project language detection. Supports Python, TypeScript/Node.js, and Terraform. Produces best-practice workflows with SHA-pinned actions, minimal GITHUB_TOKEN permissions, full-source coverage reporting, secret scanning, and dependency management automation.
 argument-hint: [project-path] (defaults to current directory)
-allowed-tools: Read, Glob, Grep, Write, Bash
+allowed-tools: Read, Glob, Grep, Write, Bash, AskUserQuestion
 ---
 
 # /generate-ci Skill
@@ -45,6 +45,11 @@ For Node.js/TypeScript, also check:
 - `yarn.lock` → package manager is **yarn**
 - `pnpm-lock.yaml` → package manager is **pnpm**
 - `package-lock.json` → package manager is **npm**
+
+For Python linter, check `pyproject.toml`:
+
+- `[tool.ruff]` section present → **Ruff**
+- default → **Ruff** (recommended)
 
 For Python test framework, check `pyproject.toml` for `[tool.pytest]` or `[tool.pytest.ini_options]` → **pytest**. Otherwise assume **pytest** as default.
 
@@ -263,7 +268,10 @@ jobs:
 
 ### Template: ci.yml (Python + pip)
 
-Same as uv variant but replace setup steps with:
+Generate the same top-level structure as the uv variant (same `on:`, `concurrency:`, job names, and
+`actionlint` job), but replace all `astral-sh/setup-uv` and `uv` steps in each job as follows:
+
+**Lint job** — replace setup-uv steps with:
 
 ```yaml
       - uses: actions/setup-python@0b93645bdc8f3c7c6f8d3cf81c2a3a0e5e68a3a3  # v5.3.0
@@ -272,9 +280,45 @@ Same as uv variant but replace setup steps with:
           cache: pip
       - name: Install dependencies
         run: pip install -e .[dev]
-      - name: Run tests
-        run: pytest --cov=src --cov-branch --cov-report=xml --junitxml=test-results.xml
+      - name: Lint with Ruff
+        run: python -m ruff check --output-format=github .
+      - name: Format check with Ruff
+        run: python -m ruff format --check .
 ```
+
+**Test job** — replace setup-uv, `uv sync`, and `uv run pytest` steps with:
+
+```yaml
+      - uses: actions/setup-python@0b93645bdc8f3c7c6f8d3cf81c2a3a0e5e68a3a3  # v5.3.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -e .[dev]
+      - name: Run tests with coverage
+        run: |
+          python -m pytest \
+            --cov=src \
+            --cov-branch \
+            --cov-report=xml:coverage.xml \
+            --cov-report=term-missing \
+            --junitxml=test-results.xml
+```
+
+**Build job** — replace setup-uv and `uv build` steps with:
+
+```yaml
+      - uses: actions/setup-python@0b93645bdc8f3c7c6f8d3cf81c2a3a0e5e68a3a3  # v5.3.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install build tool
+        run: pip install build
+      - name: Build package
+        run: python -m build
+```
+
+The `actionlint` job is identical to the uv variant.
 
 ---
 
@@ -504,7 +548,7 @@ jobs:
         uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c3  # v2.3.9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}  # remove if using Community license
+          # GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}  # required only for paid license
 
   dependency-audit:
     name: Dependency Audit
@@ -517,6 +561,10 @@ jobs:
       # --- Python (uv) ---
       # - uses: astral-sh/setup-uv@f0ec1fc3b38f5e7cd731bb6ce540c5af426746bb  # v5.4.0
       # - run: uv sync && uv run pip-audit
+      # --- Python (pip) ---
+      # - uses: actions/setup-python@0b93645bdc8f3c7c6f8d3cf81c2a3a0e5e68a3a3  # v5.3.0
+      #   with: { python-version: "3.12", cache: pip }
+      # - run: pip install -e .[dev] pip-audit && pip-audit
       # --- Node.js ---
       # - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e  # v4.3.0
       #   with: { node-version-file: .nvmrc, cache: npm }
@@ -757,8 +805,11 @@ Based on Phase 2 choices, decide which files to create:
 | Python + pip (fallback) | `ci.yml` (Python + pip variant) |
 | TypeScript + npm + Biome | `ci.yml` (TypeScript + npm + Biome variant) |
 | TypeScript + npm + ESLint | `ci.yml` (TypeScript + npm + ESLint variant) |
-| TypeScript + yarn | `ci.yml` (TypeScript + yarn variant) |
-| TypeScript + pnpm | `ci.yml` (TypeScript + pnpm variant) |
+| TypeScript + yarn + Biome | `ci.yml` (TypeScript + npm + Biome variant, substituting yarn steps per yarn template block) |
+| TypeScript + yarn + ESLint | `ci.yml` (TypeScript + npm + ESLint variant, substituting yarn steps per yarn template block) |
+| TypeScript + pnpm + Biome | `ci.yml` (TypeScript + npm + Biome variant, substituting pnpm steps per pnpm template block) |
+| TypeScript + pnpm + ESLint | `ci.yml` (TypeScript + npm + ESLint variant, substituting pnpm steps per pnpm template block) |
+| Node.js (no TypeScript) | Same as TypeScript variant; use `javascript` for CodeQL language; remove TypeScript-specific steps |
 | Terraform detected | `terraform.yml` |
 | Security steps selected | `security.yml` |
 | Renovate selected | `renovate.json` |
@@ -771,6 +822,8 @@ If both Python and TypeScript are detected in the same project, generate a combi
 Before writing files, substitute these values from Phase 1 detection:
 
 - Package manager commands (`uv run`, `pip`, `npm ci`, `yarn`, `pnpm install`)
+- For **yarn**: replace `cache: npm` → `cache: yarn`; `npm ci` → `yarn install --frozen-lockfile`; `npm run` → `yarn`
+- For **pnpm**: add `pnpm/action-setup` before `actions/setup-node`; replace `cache: npm` → `cache: pnpm`; `npm ci` → `pnpm install --frozen-lockfile`; `npm run` → `pnpm run`
 - Source directory in `--cov=<src_dir>` and `coverage.include`
 - Python version from `mise.toml` or `pyproject.toml` requires-python
 - Node.js version from `.nvmrc`, `mise.toml`, or `package.json` `engines.node`
