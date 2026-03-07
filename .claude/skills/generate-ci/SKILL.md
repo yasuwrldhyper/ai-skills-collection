@@ -334,7 +334,7 @@ jobs:
           retention-days: 7
       - name: Post coverage report on PR
         if: github.event_name == 'pull_request'
-        uses: davelosert/vitest-coverage-report-action@v2
+        uses: davelosert/vitest-coverage-report-action@2500dafcee7dd64f85ab689c0b83798a8359770e  # v2.9.3
         # Note: this action is maintained by a GitHub employee; actively maintained as of 2025
 
   build:
@@ -384,7 +384,7 @@ Replace the lint job from the Biome template with:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - uses: reviewdog/action-eslint@v1
+      - uses: reviewdog/action-eslint@b19663f0faf1d4b0f1e9f92821f530a836b4b317  # v1.34.0
         with:
           reporter: github-pr-review  # posts inline review comments on PR
           eslint_flags: "src/"
