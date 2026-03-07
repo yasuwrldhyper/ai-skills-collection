@@ -1,0 +1,18 @@
+[project]
+name = "agentteam-review"
+version = "0.1.0"
+description = "AgentTeam を使った並列コードレビューのサンプル"
+requires-python = ">=3.12"
+dependencies = [
+    "boto3>=1.34.0",
+    "google-cloud-storage>=2.14.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
