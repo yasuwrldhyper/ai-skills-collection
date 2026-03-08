@@ -14,6 +14,9 @@ mise install
 
 # Install community skills
 mise run setup:skills
+
+# Install git pre-commit hooks
+mise run setup:hooks
 ```
 
 ## Ways to Contribute
@@ -50,13 +53,23 @@ You can use the `/skill-creator` command to help generate the skill:
 
 1. Create a branch (`feat/xxx` or `fix/xxx` naming is recommended)
 2. Make your changes
-3. Verify documentation with `markdownlint`
+3. Verify documentation passes lint (the pre-commit hook runs this automatically)
 
    ```sh
-   npx markdownlint-cli2 "**/*.md" --config .markdownlint.json
+   mise run lint
    ```
 
 4. Open a PR following the PR template
+
+## Lint Scope
+
+`mise run lint` checks all Markdown files we maintain:
+
+| Included | Excluded |
+| --- | --- |
+| `README.md`, `CLAUDE.md`, `*/README.md` | `skills/**` (SKILL.md instruction files) |
+| `.github/**/*.md` | `templates/**` (pre-formatted convention templates) |
+| | `.claude/**`, `.agent/**`, `.agents/**` (symlinks / community content) |
 
 ## Code Style
 

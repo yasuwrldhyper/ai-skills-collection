@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# pre-commit: run markdownlint on staged .md files
+set -eo pipefail
+
+# Collect staged .md files that fall within our lint scope
+staged_md=$(git diff --cached --name-only --diff-filter=ACMR \
+  | grep '\.md$' \
+  | grep -v '^\.agent/' \
+  | grep -v '^\.agents/' \
+  | grep -v '^\.claude/' \
+  | grep -v '^skills/' \
+  | grep -v '^templates/' \
+  || true)
+
+if [ -z "$staged_md" ]; then
+  exit 0
+fi
+
+echo "markdownlint: checking staged files..."
+printf '%s\n' "$staged_md" | xargs npx markdownlint-cli2 --config .markdownlint.json
