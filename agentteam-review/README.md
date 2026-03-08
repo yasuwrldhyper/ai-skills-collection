@@ -8,7 +8,7 @@ AgentTeam を使った **並列コードレビュー** のサンプル実装。
 `/code-review` スキルを実行すると、以下の専門家エージェントが同時にコードを分析する:
 
 | エージェント | ペルソナ | モデル | 主な観点 |
-|-------------|---------|-------|---------|
+| --- | --- | --- | --- |
 | `python-specialist` | Python コア開発者・PEP 作者水準 | Sonnet | Pythonic・型ヒント・パフォーマンス・セキュリティ |
 | `test-specialist` | t-wada（和田卓人）型 TDD 権威 | Haiku | テスタビリティ・境界値・副作用の分離 |
 | `architect` | SOLID/DRY/Clean Architecture 専門家 | Sonnet | 神クラス・DRY違反・依存性逆転・OCP |
@@ -40,7 +40,7 @@ cp .env.example .env
 `src/sample_app/` には **意図的に問題を含んだ** サンプルコードが入っている:
 
 | ファイル | 含まれる問題 |
-|---------|------------|
+| --- | --- |
 | `api.py` | SQLインジェクション・ハードコードシークレット・N+1クエリ・型ヒントなし |
 | `storage.py` | AWS/GCP認証情報ハードコード・過剰IAM権限・リソースリーク |
 | `utils.py` | 神クラス（SRP違反）・DRY違反・`time.sleep`混入・OCP違反 |
@@ -48,7 +48,7 @@ cp .env.example .env
 ## `/simplify` との比較・推奨フロー
 
 | 項目 | `/simplify` | `/code-review` |
-|------|------------|---------------|
+| --- | --- | --- |
 | 目的 | コードを実際に修正する | 専門家視点でレビューレポートを生成 |
 | エージェント構成 | コード再利用・品質・効率性の3視点 | Python/テスト/設計/AWS/GCPの専門家5人 |
 | 出力 | 修正されたコード | Markdown レビューレポート |
@@ -57,7 +57,7 @@ cp .env.example .env
 
 ### 推奨フロー
 
-```
+```text
 1. /simplify         — 基本的なコード品質の問題を自動修正
          ↓
 2. /code-review <path> — より深いドメイン固有の問題を専門家視点で発見
@@ -67,7 +67,7 @@ cp .env.example .env
 
 ## AgentTeam の動作フロー
 
-```
+```text
 /code-review src/sample_app/
         |
         ├── TeamCreate "code-review"
