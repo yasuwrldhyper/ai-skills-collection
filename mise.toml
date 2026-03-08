@@ -24,9 +24,9 @@ run = "bash scripts/setup-project.sh ${@:-p1-ja}"
 [tasks."setup:skills"]
 description = "Install only the 3 skills (without convention template)"
 run = """
-npx skills add yasuwrldhyper/ai-skills-collection@worktree-implement -y
-npx skills add yasuwrldhyper/ai-skills-collection@resolve-pr-reviews -y
-npx skills add yasuwrldhyper/ai-skills-collection@review-comment-convention -y
+npx --yes skills add yasuwrldhyper/ai-skills-collection@worktree-implement -y
+npx --yes skills add yasuwrldhyper/ai-skills-collection@resolve-pr-reviews -y
+npx --yes skills add yasuwrldhyper/ai-skills-collection@review-comment-convention -y
 """
 
 [tasks."setup:convention"]

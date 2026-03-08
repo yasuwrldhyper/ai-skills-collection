@@ -58,12 +58,12 @@ Skills installed:
 ### Install individual skills via npx
 
 ```sh
-npx skills add yasuwrldhyper/ai-skills-collection@worktree-implement -y
-npx skills add yasuwrldhyper/ai-skills-collection@resolve-pr-reviews -y
-npx skills add yasuwrldhyper/ai-skills-collection@review-comment-convention -y
-npx skills add yasuwrldhyper/ai-skills-collection@generate-ci -y
-npx skills add yasuwrldhyper/ai-skills-collection@code-review -y
-npx skills add yasuwrldhyper/ai-skills-collection@gcp-expert -y
+npx --yes skills add yasuwrldhyper/ai-skills-collection@worktree-implement -y
+npx --yes skills add yasuwrldhyper/ai-skills-collection@resolve-pr-reviews -y
+npx --yes skills add yasuwrldhyper/ai-skills-collection@review-comment-convention -y
+npx --yes skills add yasuwrldhyper/ai-skills-collection@generate-ci -y
+npx --yes skills add yasuwrldhyper/ai-skills-collection@code-review -y
+npx --yes skills add yasuwrldhyper/ai-skills-collection@gcp-expert -y
 ```
 
 ### Clone and explore this repository

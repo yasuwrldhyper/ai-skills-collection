@@ -12,7 +12,7 @@ cd ai-skills-collection
 # Install required tools
 mise install
 
-# Install community skills
+# Install community skills (non-interactive; uses npx --yes internally)
 mise run setup:skills
 
 # Install git pre-commit hooks
