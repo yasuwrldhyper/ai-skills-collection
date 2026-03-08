@@ -63,12 +63,12 @@ You can use the `/skill-creator` command to help generate the skill:
 
 ## Lint Scope
 
-`mise run lint` checks all Markdown files we maintain:
+`mise run lint` checks almost all Markdown files in this repo:
 
 | Included | Excluded |
 | --- | --- |
-| `README.md`, `CLAUDE.md`, `*/README.md` | `skills/**` (SKILL.md instruction files) |
-| `.github/**/*.md` | `templates/**` (pre-formatted convention templates) |
+| `**/*.md` | `skills/**` (SKILL.md instruction files) |
+| | `templates/**` (pre-formatted convention templates) |
 | | `.claude/**`, `.agent/**`, `.agents/**` (symlinks / community content) |
 
 ## Code Style

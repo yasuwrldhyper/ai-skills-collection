@@ -12,8 +12,10 @@ npx --yes markdownlint-cli2 \
 [tasks."setup:hooks"]
 description = "Install git pre-commit hooks"
 run = """
-cp scripts/hooks/pre-commit .git/hooks/pre-commit
-chmod +x .git/hooks/pre-commit
+hooks_dir="$(git rev-parse --git-path hooks)"
+mkdir -p "$hooks_dir"
+cp scripts/hooks/pre-commit "$hooks_dir/pre-commit"
+chmod +x "$hooks_dir/pre-commit"
 echo "pre-commit hook installed"
 """
 
