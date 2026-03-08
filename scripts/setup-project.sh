@@ -18,22 +18,33 @@ fi
 
 echo "==> Installing skills from ${REPO}..."
 
-# Install 3 skills
-for skill in worktree-implement resolve-pr-reviews review-comment-convention; do
-  echo "    Installing ${skill}..."
-  npx skills add "${REPO}@${skill}" -y 2>/dev/null || {
-    echo "    Warning: Failed to install ${skill}. Continuing..."
-  }
-done
+# Install 3 skills (skip if SKIP_SKILLS_INSTALL=1)
+if [[ "${SKIP_SKILLS_INSTALL:-0}" != "1" ]]; then
+  for skill in worktree-implement resolve-pr-reviews review-comment-convention; do
+    echo "    Installing ${skill}..."
+    npx skills add "${REPO}@${skill}" -y || {
+      echo "    Warning: Failed to install ${skill}. Continuing..." >&2
+    }
+  done
+else
+  echo "    Skipped (SKIP_SKILLS_INSTALL=1)"
+fi
 
 echo "==> Applying review convention (preset: ${PRESET})..."
 
 # Download template
 TEMPLATE_URL="https://raw.githubusercontent.com/${REPO}/main/templates/review-convention/${PRESET}.md"
 CONVENTION=$(curl -fsSL "$TEMPLATE_URL") || {
-  echo "Error: Failed to download template from ${TEMPLATE_URL}"
+  echo "Error: Failed to download template from ${TEMPLATE_URL}" >&2
   exit 1
 }
+
+# Validate template content to avoid writing unexpected data
+if [[ ! "$CONVENTION" == "## Code Review Comment Convention"* && \
+      ! "$CONVENTION" == "## コードレビューコメント規約"* ]]; then
+  echo "Error: Downloaded template from ${TEMPLATE_URL} has unexpected format" >&2
+  exit 1
+fi
 
 # Write to .github/copilot-instructions.md
 mkdir -p .github

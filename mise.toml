@@ -12,4 +12,4 @@ npx skills add yasuwrldhyper/ai-skills-collection@review-comment-convention -y
 
 [tasks."setup:convention"]
 description = "Apply review convention template only"
-run = "bash scripts/setup-project.sh ${@:-p1-ja}"
+run = "SKIP_SKILLS_INSTALL=1 bash scripts/setup-project.sh ${@:-p1-ja}"

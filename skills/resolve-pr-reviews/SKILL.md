@@ -190,10 +190,10 @@ After processing all threads in the iteration:
 ### 4-1. Stage changes
 
 ```bash
-git add -p  # or: git add <specific-files-changed>
+git add <file1> <file2> ...  # stage only the files modified during this iteration
 ```
 
-Stage only the files modified during this iteration.
+Stage only the files modified during this iteration. Do NOT use `git add -p` (interactive) or `git add .` (too broad).
 
 ### 4-2. Commit
 
