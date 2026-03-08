@@ -114,6 +114,11 @@ Exit cleanly.
 
 Process each unresolved thread in sequence.
 
+**Before processing threads**, initialize an empty list to track modified files:
+```
+MODIFIED_FILES=[]  # collect thread.path for every actionable fix applied
+```
+
 For each thread:
 
 ### 3-1. Classify the comment
@@ -145,6 +150,11 @@ Read the referenced file:
 
 Apply the minimal change that addresses the review comment using the Edit tool.
 Do NOT refactor surrounding code. Do NOT add unrelated changes.
+
+After applying the fix, **record the file path**:
+```
+MODIFIED_FILES.append(thread.path)  # used in Phase 4 for staging
+```
 
 ### 3-3. Reply to thread
 
@@ -189,11 +199,14 @@ After processing all threads in the iteration:
 
 ### 4-1. Stage changes
 
+Use the file paths collected in `MODIFIED_FILES` during Phase 3:
+
 ```bash
-git add <file1> <file2> ...  # stage only the files modified during this iteration
+git add <path1> <path2> ...  # deduplicated list from MODIFIED_FILES
 ```
 
-Stage only the files modified during this iteration. Do NOT use `git add -p` (interactive) or `git add .` (too broad).
+Do NOT use `git add -p` (interactive) or `git add .` (too broad).
+If a path contains spaces or special characters, quote it: `git add "path with spaces/file.md"`.
 
 ### 4-2. Commit
 

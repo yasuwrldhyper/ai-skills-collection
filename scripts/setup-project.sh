@@ -33,15 +33,17 @@ fi
 echo "==> Applying review convention (preset: ${PRESET})..."
 
 # Download template
-TEMPLATE_URL="https://raw.githubusercontent.com/${REPO}/main/templates/review-convention/${PRESET}.md"
+BRANCH="${BRANCH:-main}"
+TEMPLATE_URL="https://raw.githubusercontent.com/${REPO}/${BRANCH}/templates/review-convention/${PRESET}.md"
 CONVENTION=$(curl -fsSL "$TEMPLATE_URL") || {
   echo "Error: Failed to download template from ${TEMPLATE_URL}" >&2
   exit 1
 }
 
 # Validate template content to avoid writing unexpected data
-if [[ ! "$CONVENTION" == "## Code Review Comment Convention"* && \
-      ! "$CONVENTION" == "## コードレビューコメント規約"* ]]; then
+if [[ -z "$CONVENTION" || \
+      ( "$CONVENTION" != "## Code Review Comment Convention"* && \
+        "$CONVENTION" != "## コードレビューコメント規約"* ) ]]; then
   echo "Error: Downloaded template from ${TEMPLATE_URL} has unexpected format" >&2
   exit 1
 fi
@@ -49,7 +51,7 @@ fi
 # Write to .github/copilot-instructions.md
 mkdir -p .github
 if [[ -f .github/copilot-instructions.md ]]; then
-  if grep -q "## Code Review Comment Convention\|## コードレビューコメント規約" .github/copilot-instructions.md 2>/dev/null; then
+  if grep -qE "## Code Review Comment Convention|## コードレビューコメント規約" .github/copilot-instructions.md 2>/dev/null; then
     echo "    .github/copilot-instructions.md already has convention section (skipped)"
   else
     printf '\n%s\n' "$CONVENTION" >> .github/copilot-instructions.md
@@ -62,7 +64,7 @@ fi
 
 # Write to CLAUDE.md if exists
 if [[ -f CLAUDE.md ]]; then
-  if grep -q "## Code Review Comment Convention\|## コードレビューコメント規約" CLAUDE.md 2>/dev/null; then
+  if grep -qE "## Code Review Comment Convention|## コードレビューコメント規約" CLAUDE.md 2>/dev/null; then
     echo "    CLAUDE.md already has convention section (skipped)"
   else
     printf '\n%s\n' "$CONVENTION" >> CLAUDE.md

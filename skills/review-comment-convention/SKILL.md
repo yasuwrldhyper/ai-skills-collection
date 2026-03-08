@@ -21,7 +21,7 @@ Parse `$ARGUMENTS` and branch:
 |----------|--------|
 | _(empty)_ or `setup` | Run Phase 1 → 2 → 3 → 4 (full interactive flow) |
 | `show` | Run Phase 1 (detect only), then print current convention and exit |
-| `apply <file>` | Skip Phase 1–2, use existing convention block from Phase 1 detection, write to `<file>` |
+| `apply <file>` | Run Phase 1 (detect only), skip Phase 2–3, use existing convention block, write to `<file>` |
 | `preset <name> [files...]` | Non-interactive mode. Skip Phase 1–2, generate from preset, write to targets. See **Preset Mode** below |
 
 ---
