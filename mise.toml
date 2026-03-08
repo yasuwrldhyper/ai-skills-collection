@@ -1,3 +1,24 @@
+[tools]
+node = "22"
+
+[tasks.lint]
+description = "Lint Markdown files (docs we own)"
+run = """
+npx --yes markdownlint-cli2 \
+  "**/*.md" "!.agent/**" "!.agents/**" "!.claude/**" "!skills/**" "!templates/**" \
+  --config .markdownlint.json
+"""
+
+[tasks."setup:hooks"]
+description = "Install git pre-commit hooks"
+run = """
+hooks_dir="$(git rev-parse --git-path hooks)"
+mkdir -p "$hooks_dir"
+cp scripts/hooks/pre-commit "$hooks_dir/pre-commit"
+chmod +x "$hooks_dir/pre-commit"
+echo "pre-commit hook installed"
+"""
+
 [tasks.setup]
 description = "Install skills and apply review convention"
 run = "bash scripts/setup-project.sh ${@:-p1-ja}"
@@ -5,9 +26,9 @@ run = "bash scripts/setup-project.sh ${@:-p1-ja}"
 [tasks."setup:skills"]
 description = "Install only the 3 skills (without convention template)"
 run = """
-npx skills add yasuwrldhyper/ai-skills-collection@worktree-implement -y
-npx skills add yasuwrldhyper/ai-skills-collection@resolve-pr-reviews -y
-npx skills add yasuwrldhyper/ai-skills-collection@review-comment-convention -y
+npx --yes skills add yasuwrldhyper/ai-skills-collection@worktree-implement -y
+npx --yes skills add yasuwrldhyper/ai-skills-collection@resolve-pr-reviews -y
+npx --yes skills add yasuwrldhyper/ai-skills-collection@review-comment-convention -y
 """
 
 [tasks."setup:convention"]

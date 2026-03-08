@@ -22,7 +22,7 @@ echo "==> Installing skills from ${REPO}..."
 if [[ "${SKIP_SKILLS_INSTALL:-0}" != "1" ]]; then
   for skill in worktree-implement resolve-pr-reviews review-comment-convention; do
     echo "    Installing ${skill}..."
-    npx skills add "${REPO}@${skill}" -y || {
+    npx --yes skills add "${REPO}@${skill}" -y || {
       echo "    Warning: Failed to install ${skill}. Continuing..." >&2
     }
   done

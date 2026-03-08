@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# pre-commit: run markdownlint on staged .md files
+set -eo pipefail
+
+# Collect staged .md files that fall within our lint scope
+# Use null-delimited output to handle filenames with spaces safely
+staged_md_files=()
+while IFS= read -r -d '' path; do
+  # Only keep Markdown files
+  case "$path" in
+    *.md) ;;
+    *) continue ;;
+  esac
+
+  # Exclude paths outside our lint scope
+  case "$path" in
+    .agent/*|.agents/*|.claude/*|skills/*|templates/*)
+      continue
+      ;;
+  esac
+
+  staged_md_files+=("$path")
+done < <(git diff --cached --name-only -z --diff-filter=ACMR)
+
+if [ ${#staged_md_files[@]} -eq 0 ]; then
+  exit 0
+fi
+
+echo "markdownlint: checking staged files..."
+npx --yes markdownlint-cli2 --config .markdownlint.json "${staged_md_files[@]}"
