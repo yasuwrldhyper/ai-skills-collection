@@ -1,7 +1,7 @@
 ---
 name: generate-ci
 description: Interactively generates GitHub Actions CI workflow files based on project language detection. Supports Python, TypeScript/Node.js, and Terraform. Produces best-practice workflows with SHA-pinned actions, minimal GITHUB_TOKEN permissions, full-source coverage reporting, secret scanning, and dependency management automation.
-argument-hint: [project-path] (defaults to current directory)
+argument-hint: "[project-path] (defaults to current directory)"
 allowed-tools: Read, Glob, Grep, Write, Bash, AskUserQuestion
 ---
 

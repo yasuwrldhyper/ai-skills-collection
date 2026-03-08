@@ -1,7 +1,7 @@
 ---
 name: resolve-pr-reviews
 description: PRの未解決レビューコメントを取得し、修正を実装してリプライ・スレッド解決・pushまで自動化する。レビューラリー（再レビュー後の新コメント）にも対応。
-argument-hint: [PR#]
+argument-hint: "[PR#]"
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep
 ---
 
