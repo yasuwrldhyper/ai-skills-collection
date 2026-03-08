@@ -36,7 +36,12 @@ def truncate(text: str, max_length: int, suffix: str = "...") -> str:
     Returns:
         The original text if it fits within max_length, otherwise the
         truncated text with the suffix appended.
+
+    Raises:
+        ValueError: If max_length is less than the length of suffix.
     """
     if len(text) <= max_length:
         return text
+    if max_length < len(suffix):
+        raise ValueError(f"max_length ({max_length}) must be >= len(suffix) ({len(suffix)})")
     return text[: max_length - len(suffix)] + suffix
