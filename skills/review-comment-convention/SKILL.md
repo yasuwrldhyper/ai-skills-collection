@@ -1,7 +1,7 @@
 ---
 name: review-comment-convention
 description: PRレビューコメントの優先度規約（P1–P5 または must/imo/nits/fyi）を対話的に設定し、copilot-instructions.md と CLAUDE.md に書き込む。出力言語（日本語・英語・バイリンガル）も設定可能。
-argument-hint: [setup | show | apply <file> | preset <name>]
+argument-hint: "[setup | show | apply <file> | preset <name>]"
 allowed-tools: Read, Write, Edit, Glob, Bash, AskUserQuestion
 ---
 
