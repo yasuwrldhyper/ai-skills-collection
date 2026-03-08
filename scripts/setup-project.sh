@@ -11,8 +11,8 @@ for p in "${VALID_PRESETS[@]}"; do
   [[ "$PRESET" == "$p" ]] && valid=true && break
 done
 if [[ "$valid" == "false" ]]; then
-  echo "Error: Unknown preset '${PRESET}'"
-  echo "Available presets: ${VALID_PRESETS[*]}"
+  echo "Error: Unknown preset '${PRESET}'" >&2
+  echo "Available presets: ${VALID_PRESETS[*]}" >&2
   exit 1
 fi
 
