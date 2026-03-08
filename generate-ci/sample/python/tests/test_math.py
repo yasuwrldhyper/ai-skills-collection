@@ -1,8 +1,6 @@
 """Tests for calculator module (partial coverage - only add and subtract)."""
 
-import pytest
-
-from src.app.calculator import add, subtract
+from app.calculator import add, subtract
 
 
 def test_add_positive_numbers():

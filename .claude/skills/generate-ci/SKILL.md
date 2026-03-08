@@ -199,8 +199,8 @@ Based on Phase 1 detection and Phase 2 answers, generate the workflow files usin
 **Important security rules for ALL generated workflows:**
 
 - Pin ALL third-party Actions to their git SHA hash, with a version comment
-- Add `permissions: {}` at the workflow level to restrict default GITHUB_TOKEN to read-only;
-  then specify the minimum required `permissions:` on each job individually
+- Add `permissions: {}` at the workflow level to remove all default GITHUB_TOKEN permissions (equivalent to `permissions: none`);
+  then explicitly grant the minimum required `permissions:` at the job level (e.g., `contents: read` for jobs that use `actions/checkout`)
 - Always include `concurrency: cancel-in-progress: true` (use `${{ github.event_name == 'pull_request' }}` for `security.yml` that has a `schedule` trigger, to avoid cancelling scheduled CVE scans)
 - Always include `timeout-minutes` on every job
 - Use `hashFiles()` in all cache keys

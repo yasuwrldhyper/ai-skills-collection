@@ -77,7 +77,7 @@ During `/generate-ci`, Claude will ask a series of questions to tailor the outpu
 
 | Directory | Description |
 | --- | --- |
-| `sample/python/` | Python project managed with uv, includes intentional coverage gaps |
+| `sample/python/` | Python project (pip-based) with intentional coverage gaps |
 | `sample/typescript/` | TypeScript project (npm + Vitest) with partial test coverage |
 | `sample/terraform/` | AWS S3 Terraform module with tflint configuration |
 
