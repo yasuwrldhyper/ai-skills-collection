@@ -42,8 +42,8 @@ CONVENTION=$(curl -fsSL "$TEMPLATE_URL") || {
 
 # Validate template content to avoid writing unexpected data
 if [[ -z "$CONVENTION" || \
-      ( "$CONVENTION" != "## Code Review Comment Convention"* && \
-        "$CONVENTION" != "## コードレビューコメント規約"* ) ]]; then
+      ! ( "$CONVENTION" == "## Code Review Comment Convention"* || \
+          "$CONVENTION" == "## コードレビューコメント規約"* ) ]]; then
   echo "Error: Downloaded template from ${TEMPLATE_URL} has unexpected format" >&2
   exit 1
 fi
