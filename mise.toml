@@ -4,7 +4,7 @@ node = "22"
 [tasks.lint]
 description = "Lint Markdown files (docs we own)"
 run = """
-npx markdownlint-cli2 \
+npx --yes markdownlint-cli2 \
   "**/*.md" "!.agent/**" "!.agents/**" "!.claude/**" "!skills/**" "!templates/**" \
   --config .markdownlint.json
 """

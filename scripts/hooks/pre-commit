@@ -3,18 +3,28 @@
 set -eo pipefail
 
 # Collect staged .md files that fall within our lint scope
-staged_md=$(git diff --cached --name-only --diff-filter=ACMR \
-  | grep '\.md$' \
-  | grep -v '^\.agent/' \
-  | grep -v '^\.agents/' \
-  | grep -v '^\.claude/' \
-  | grep -v '^skills/' \
-  | grep -v '^templates/' \
-  || true)
+# Use null-delimited output to handle filenames with spaces safely
+staged_md_files=()
+while IFS= read -r -d '' path; do
+  # Only keep Markdown files
+  case "$path" in
+    *.md) ;;
+    *) continue ;;
+  esac
 
-if [ -z "$staged_md" ]; then
+  # Exclude paths outside our lint scope
+  case "$path" in
+    .agent/*|.agents/*|.claude/*|skills/*|templates/*)
+      continue
+      ;;
+  esac
+
+  staged_md_files+=("$path")
+done < <(git diff --cached --name-only -z --diff-filter=ACMR)
+
+if [ ${#staged_md_files[@]} -eq 0 ]; then
   exit 0
 fi
 
 echo "markdownlint: checking staged files..."
-printf '%s\n' "$staged_md" | xargs npx markdownlint-cli2 --config .markdownlint.json
+npx --yes markdownlint-cli2 --config .markdownlint.json "${staged_md_files[@]}"

@@ -31,7 +31,7 @@ A curated collection of [Claude Code](https://claude.ai/code) skills focused on 
 
 ### Add skills to your project
 
-One-liner to install 3 skills + review convention (default: P1–P5, English):
+One-liner to install 3 skills + review convention (default preset: P1–P5, Japanese; use `p1-en` for English):
 
 ```sh
 bash <(curl -fsSL https://raw.githubusercontent.com/yasuwrldhyper/ai-skills-collection/main/scripts/setup-project.sh) p1-en
