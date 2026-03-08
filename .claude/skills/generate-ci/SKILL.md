@@ -158,13 +158,16 @@ Split into two calls if needed:
   - "Private / internal (default)"
   - "Public (enables fork PR support)"
 
-Ask security policy as a follow-up call when option 1 includes SAST (i.e., user selected "SAST"
+Ask security policy and GHAS availability as a follow-up call when option 1 includes SAST (i.e., user selected "SAST"
 or all options):
 
 - "Security scan failure policy?" (3 options)
   - "Advisory — CRITICAL findings appear in Security tab, CI never fails (recommended)"
   - "Strict — Trivy exits with error on CRITICAL/HIGH/MEDIUM; CodeQL requires branch protection rule"
   - "Log-only — all findings visible in Security tab, CI never fails"
+- "GitHub Advanced Security (GHAS) available?" (2 options)
+  - "Yes — public repo or GHAS enabled: generate CodeQL job + SARIF upload (recommended)"
+  - "No — private repo without GHAS: omit CodeQL job; set Trivy SARIF upload to continue-on-error"
 
 For Terraform-only projects: always generate `terraform.yml` separately regardless of workflow
 structure choice.
@@ -197,6 +200,10 @@ Please answer the following to configure your CI:
    a) Advisory - findings appear in Security tab, CI never fails [recommended]
    b) Strict - Trivy fails CI directly; CodeQL requires branch protection rule
    c) Log-only - all findings visible in Security tab, CI never fails
+
+6. GitHub Advanced Security (GHAS) available? (asked only when SAST is selected)
+   a) Yes - public repo or GHAS enabled: generate CodeQL job + SARIF upload [default]
+   b) No - private repo without GHAS: omit CodeQL job; Trivy SARIF upload set to continue-on-error
 ```
 
 Wait for user responses before proceeding to Phase 3.
@@ -326,7 +333,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       - name: Run actionlint
-        uses: raven-actions/actionlint@3a10a4f81f7bb6af5be900e2e6b0c9c1a94cc428  # v2.0.0
+        uses: raven-actions/actionlint@205b530c5d9fa8f44ae9ed59f341a0db994aa6f8  # v2.1.2
 ```
 
 ---
@@ -436,7 +443,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       - name: Run actionlint
-        uses: raven-actions/actionlint@3a10a4f81f7bb6af5be900e2e6b0c9c1a94cc428  # v2.0.0
+        uses: raven-actions/actionlint@205b530c5d9fa8f44ae9ed59f341a0db994aa6f8  # v2.1.2
 ```
 
 ---
@@ -554,6 +561,10 @@ jobs:
       - name: Post coverage report on PR
         if: github.event_name == 'pull_request'
         uses: davelosert/vitest-coverage-report-action@2500dafcee7dd64f85ab689c0b83798a8359770e  # v2.9.3
+        with:
+          # "all" shows Changed Files + Unchanged Files sections (full project coverage visibility).
+          # "changes" (default) shows only PR-modified files.
+          file-coverage-mode: all
         # Note: this action is maintained by a GitHub employee; actively maintained as of 2025
 
   build:
@@ -579,7 +590,7 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
-      - uses: raven-actions/actionlint@3a10a4f81f7bb6af5be900e2e6b0c9c1a94cc428  # v2.0.0
+      - uses: raven-actions/actionlint@205b530c5d9fa8f44ae9ed59f341a0db994aa6f8  # v2.1.2
 ```
 
 ---
@@ -677,12 +688,13 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      pull-requests: read  # Required by gitleaks-action to list PR commits on pull_request events
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
           fetch-depth: 0  # full history for secret scanning
       - name: Run gitleaks
-        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c3  # v2.3.9
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7  # v2.3.9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}  # required only for paid license
@@ -742,7 +754,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@45ef7ffa9d96ffa67d0064b2ef91fb6b2e0bf0e2  # v3.28.13
+        uses: github/codeql-action/init@0d579ffd059c29b07949a3cce3983f0780820c98  # v4.32.6
         with:
           languages: ${{ matrix.language }}
           # `queries:` controls which rule suite runs:
@@ -754,9 +766,9 @@ jobs:
           # and configure the severity threshold in repository Settings > Code security.
           queries: security-extended
       - name: Autobuild
-        uses: github/codeql-action/autobuild@45ef7ffa9d96ffa67d0064b2ef91fb6b2e0bf0e2  # v3.28.13
+        uses: github/codeql-action/autobuild@0d579ffd059c29b07949a3cce3983f0780820c98  # v4.32.6
       - name: Analyze
-        uses: github/codeql-action/analyze@45ef7ffa9d96ffa67d0064b2ef91fb6b2e0bf0e2  # v3.28.13
+        uses: github/codeql-action/analyze@0d579ffd059c29b07949a3cce3983f0780820c98  # v4.32.6
         with:
           category: "/language:${{ matrix.language }}"
 
@@ -770,7 +782,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       - name: Run Trivy
-        uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8  # v0.29.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1  # 0.35.0
         with:
           scan-type: fs
           format: sarif
@@ -781,7 +793,7 @@ jobs:
           # For LOG-ONLY: remove exit-code line
           exit-code: "0"  # change to '1' for STRICT mode
       - name: Upload Trivy results to Security tab
-        uses: github/codeql-action/upload-sarif@45ef7ffa9d96ffa67d0064b2ef91fb6b2e0bf0e2  # v3.28.13
+        uses: github/codeql-action/upload-sarif@0d579ffd059c29b07949a3cce3983f0780820c98  # v4.32.6
         if: always()
         with:
           sarif_file: trivy-results.sarif
@@ -794,7 +806,7 @@ jobs:
     permissions:
       pull-requests: read
     steps:
-      - uses: amannn/action-semantic-pull-request@0723387faaf9b38adef4775cd42cfd5155ed6017  # v5.5.3
+      - uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50  # v6.1.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -830,10 +842,11 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+      pull-requests: write  # Required for reviewdog inline PR comments
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
-      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269ef065  # v3.1.2
+      - uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85  # v4.0.0
 
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
@@ -845,18 +858,28 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
-      - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684  # v4.2.3
+      - uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306  # v5.0.3
         with:
           path: ~/.tflint.d/plugins
           key: tflint-${{ runner.os }}-${{ hashFiles('.tflint.hcl') }}
 
-      - uses: terraform-linters/setup-tflint@90f42f91df18aa9e2b5a2da49e94e7e5a82e3b8d  # v4.1.1
+      - uses: terraform-linters/setup-tflint@4cb9feea73331a35b422df102992a03a44a3bb33  # v6.2.1
 
       - name: Init tflint
         run: tflint --init
 
-      - name: Run tflint
+      - name: Run tflint (push — log only)
+        if: github.event_name != 'pull_request'
         run: tflint --recursive --format compact
+
+      - name: Run tflint (PR — inline comments via reviewdog)
+        if: github.event_name == 'pull_request'
+        uses: reviewdog/action-tflint@54a5e5aed57dcfbb4662ec548de876df33d6288d  # v1.25.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-pr-review  # posts tflint errors as inline review comments on PR diff
+          flags: "--recursive"
+          fail_on_error: "true"
 
   terraform-security:
     name: Terraform Security Scan
@@ -868,7 +891,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       - name: Run Trivy for IaC
-        uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8  # v0.29.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1  # 0.35.0
         with:
           scan-type: config
           format: sarif
@@ -876,7 +899,7 @@ jobs:
           severity: "CRITICAL,HIGH"
           exit-code: "0"
       - name: Upload results to Security tab
-        uses: github/codeql-action/upload-sarif@45ef7ffa9d96ffa67d0064b2ef91fb6b2e0bf0e2  # v3.28.13
+        uses: github/codeql-action/upload-sarif@0d579ffd059c29b07949a3cce3983f0780820c98  # v4.32.6
         if: always()
         with:
           sarif_file: trivy-iac.sarif
@@ -890,7 +913,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       - name: Run actionlint
-        uses: raven-actions/actionlint@3a10a4f81f7bb6af5be900e2e6b0c9c1a94cc428  # v2.0.0
+        uses: raven-actions/actionlint@205b530c5d9fa8f44ae9ed59f341a0db994aa6f8  # v2.1.2
 ```
 
 ---
@@ -969,6 +992,23 @@ updates:
 
 ## Phase 3 Execution Instructions
 
+> **SHA の鮮度確認 (任意)**
+> テンプレートの SHA は時間とともに陳腐化します。Renovate/Dependabot 未導入の場合や
+> 重要なアップデートが疑われる場合は、生成前に以下で最新 SHA を確認してください:
+>
+> ```sh
+> # 1. 最新リリースタグを取得
+> gh api repos/{owner}/{repo}/releases/latest --jq '.tag_name'
+>
+> # 2. タグの SHA を取得（通常タグ）
+> gh api repos/{owner}/{repo}/git/ref/tags/{tag} --jq '.object.sha'
+>
+> # 3. annotated tag の場合はさらに dereference
+> gh api repos/{owner}/{repo}/git/tags/{sha} --jq '.object.sha'
+> ```
+>
+> Renovate/Dependabot を導入済みであれば自動更新されるため、この手順は省略可能です。
+
 ### Step 1: Determine files to generate
 
 Based on Phase 2 choices, decide which files to create:
@@ -1022,6 +1062,22 @@ Before writing files, substitute these values from Phase 1 detection:
   # Restrict on fork PRs (no write permissions available from forks)
   if: github.event.pull_request.head.repo.full_name == github.repository
   ```
+
+- **GHAS availability from Phase 2** (applies when SAST was selected):
+  - **GHAS = Yes**: Generate the full `sast` job (CodeQL) and Trivy `upload-sarif` without `continue-on-error`
+  - **GHAS = No**: **Omit the `sast` job entirely**; add `continue-on-error: true` to Trivy `upload-sarif` steps
+    with a comment explaining the requirement:
+
+    ```yaml
+          - name: Upload Trivy results to Security tab
+            uses: github/codeql-action/upload-sarif@0d579ffd059c29b07949a3cce3983f0780820c98  # v4.32.6
+            if: always()
+            with:
+              sarif_file: trivy-results.sarif
+            # SARIF upload requires GitHub Advanced Security for private repos.
+            # Enable GHAS and remove continue-on-error to surface findings in the Security tab.
+            continue-on-error: true
+    ```
 
 ### Step 3: Apply security failure policy from Phase 2
 
