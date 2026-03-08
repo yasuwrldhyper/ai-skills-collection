@@ -129,6 +129,7 @@ Based on Phase 2 selections, generate a Markdown section.
 ```markdown
 ## コードレビューコメント規約
 
+レビューコメントは**日本語**で記述すること。
 レビューコメントには以下の優先度プレフィックスを付与する。
 レビュイーはレベルに応じて対応を判断すること。
 
@@ -193,6 +194,7 @@ And include a bilingual examples section.
 ```markdown
 ## コードレビューコメント規約
 
+レビューコメントは**日本語**で記述すること。
 レビューコメントには以下のラベルを先頭に付与する。
 
 | ラベル | 意味 | 対応 |
