@@ -50,16 +50,11 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: pip install -e .[dev]
-      # NOTE: --cov=src measures ALL files in src/, including untested ones (shown as 0%).
-      # This gives an honest picture of total coverage. Adjust --cov=<your-src-dir> if needed.
+      # NOTE: Coverage flags (--cov, --cov-report, etc.) are already defined in pyproject.toml
+      # addopts, so we only need to add --junitxml here for CI artifact collection.
       - name: Run tests with coverage
         run: |
-          python -m pytest \
-            --cov=src \
-            --cov-branch \
-            --cov-report=xml:coverage.xml \
-            --cov-report=term-missing \
-            --junitxml=test-results.xml
+          python -m pytest --junitxml=test-results.xml
         # To enable retries for flaky tests: pip install pytest-rerunfailures
         # then add: --reruns 2 --reruns-delay 5
       - name: Upload coverage report

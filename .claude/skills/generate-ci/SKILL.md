@@ -50,6 +50,11 @@ For Node.js/TypeScript, also check:
 - `yarn.lock` → package manager is **yarn**
 - `pnpm-lock.yaml` → package manager is **pnpm**
 - `package-lock.json` → package manager is **npm**
+- If `package.json` exists but **no lockfile** is present, inform the user:
+  "⚠️ No lockfile detected (package-lock.json, yarn.lock, or pnpm-lock.yaml).
+  The generated workflow uses `npm ci` / `yarn --frozen-lockfile` which requires a committed lockfile.
+  Please run `npm install` / `yarn install` / `pnpm install` and commit the lockfile, then re-run /generate-ci."
+  Stop generation and do not proceed to Phase 2.
 
 For Python linter, check `pyproject.toml`:
 
@@ -63,6 +68,12 @@ For Python version, check in order:
 - Neither found → default to `"3.12"`
 
 For Python test framework, check `pyproject.toml` for `[tool.pytest]` or `[tool.pytest.ini_options]` → **pytest**. Otherwise assume **pytest** as default.
+
+For Python pytest configuration, check `pyproject.toml` `[tool.pytest.ini_options]`:
+
+- If `addopts` contains coverage-related flags (`--cov`, `--cov-report`, etc.), the project already configures coverage.
+  In this case, the generated workflow should **only** add `--junitxml` for CI artifacts, and rely on the project config for coverage reporting.
+- If no `addopts` or minimal flags, the generated workflow should include full coverage flags: `--cov=<src_dir> --cov-branch --cov-report=xml --cov-report=term-missing --junitxml=test-results.xml`
 
 For Node.js/TypeScript version, check in order:
 
@@ -998,6 +1009,9 @@ Before writing files, substitute these values from Phase 1 detection:
 - For **yarn**: replace `cache: npm` → `cache: yarn`; `npm ci` → `yarn install --frozen-lockfile`; `npm run` → `yarn`
 - For **pnpm**: add `pnpm/action-setup` before `actions/setup-node`; replace `cache: npm` → `cache: pnpm`; `npm ci` → `pnpm install --frozen-lockfile`; `npm run` → `pnpm run`
 - Source directory in `--cov=<src_dir>` and `coverage.include`
+- **Python pytest command**: If `pyproject.toml` `[tool.pytest.ini_options].addopts` already contains coverage flags,
+  simplify the workflow pytest command to only: `pytest --junitxml=test-results.xml` (rely on project config for coverage).
+  Otherwise, use the full template with `--cov=<src_dir> --cov-branch --cov-report=xml --cov-report=term-missing --junitxml=test-results.xml`
 - Python version from `mise.toml` or `pyproject.toml` requires-python
 - Node.js version: if `.nvmrc` exists → `node-version-file: .nvmrc`; otherwise → `node-version: "<detected-version>"` (fallback: `"22"`)
   Remove the `node-version-file` key from templates if `.nvmrc` is absent
