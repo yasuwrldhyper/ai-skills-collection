@@ -439,8 +439,7 @@ The common setup block for all poetry jobs:
       - uses: actions/setup-python@0b93645bdc8f3c7c6f8d3cf81c2a3a0e5e68a3a3  # v5.3.0
         with:
           python-version: "3.12"
-          # Note: cache: pip is not available for Poetry; omit or use actions/cache manually:
-          # key: poetry-${{ hashFiles('poetry.lock') }}
+          cache: poetry  # Cache dependencies based on poetry.lock
       - name: Install Poetry
         # Pin to a specific version for reproducibility, e.g. "poetry==2.1.3"
         run: pip install "poetry>=2.0,<3.0"
@@ -685,6 +684,9 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      # NOTE: When generating this workflow, uncomment ONLY the block matching the detected
+      # ecosystem below. Remove all other commented blocks. Do not leave placeholders in the
+      # generated workflow.
       # --- Python (uv) ---
       # Requires: uv add pip-audit --dev
       # - uses: astral-sh/setup-uv@f0ec1fc3b38f5e7cd731bb6ce540c5af426746bb  # v5.4.0
@@ -696,7 +698,7 @@ jobs:
       # --- Python (poetry) ---
       # Requires: poetry add pip-audit --group dev
       # - uses: actions/setup-python@0b93645bdc8f3c7c6f8d3cf81c2a3a0e5e68a3a3  # v5.3.0
-      #   with: { python-version: "3.12" }
+      #   with: { python-version: "3.12", cache: poetry }
       # - run: pip install "poetry>=2.0,<3.0" && poetry install --with dev && poetry run pip-audit
       # --- Node.js (npm) ---
       # - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e  # v4.3.0
