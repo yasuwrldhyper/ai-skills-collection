@@ -182,6 +182,9 @@ tests/          → テスト チームメイト
 | `/code-review <path>` | 5人の専門家エージェントが並列でコードレビューを実施し、`.claude/reviews/` にレポートを保存 |
 | `/gcp-expert [質問]` | GCP サービス選定・実装パターン・セキュリティベストプラクティスをアドバイス |
 | `/generate-ci [path]` | 言語・IaC を自動検出し、GitHub Actions CI ワークフローをベストプラクティス（SHA固定・最小権限・カバレッジ可視化・シークレットスキャン）に基づいて対話的に生成 |
+| `/worktree-implement <task>` | タスク説明からブランチ名を自動生成し `git worktree` で独立した実装環境を作成する。`cleanup` 引数でworktreeを削除 |
+| `/resolve-pr-reviews [PR#]` | PRの未解決レビューコメントを取得し、修正実装・リプライ・スレッド解決・pushを自動化する。レビューラリーに最大3回対応 |
+| `/review-comment-convention [setup\|show\|apply <file>]` | PRレビューコメントの優先度規約（P1–P5 または must/imo/nits/fyi）を対話的に設定し、`.github/copilot-instructions.md` と `CLAUDE.md` に書き込む |
 
 ### コミュニティスキル（skills.sh 経由）
 
@@ -201,3 +204,20 @@ npx skills update    # 全スキルを最新版に更新
 npx skills check     # アップデート確認
 npx skills add <owner/repo@skill>  # 新規スキルを追加
 ```
+
+### 新規プロジェクトへのスキル適用
+
+セットアップスクリプトで3スキルのインストールとレビュー規約の適用を一括実行:
+
+```sh
+# デフォルト（P1-P5、日本語）
+bash <(curl -fsSL https://raw.githubusercontent.com/yasuwrldhyper/ai-skills-collection/main/scripts/setup-project.sh)
+
+# プリセット指定
+bash <(curl -fsSL https://raw.githubusercontent.com/yasuwrldhyper/ai-skills-collection/main/scripts/setup-project.sh) p1-en
+bash <(curl -fsSL https://raw.githubusercontent.com/yasuwrldhyper/ai-skills-collection/main/scripts/setup-project.sh) must-ja
+```
+
+プリセット: `p1-ja`(default) / `p1-en` / `must-ja` / `must-en`
+
+手動でカスタマイズする場合は Claude Code で `/review-comment-convention setup` を実行。
