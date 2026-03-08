@@ -1,3 +1,6 @@
+[tools]
+node = "22"
+
 [tasks.setup]
 description = "Install skills and apply review convention"
 run = "bash scripts/setup-project.sh ${@:-p1-ja}"
