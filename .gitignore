@@ -38,3 +38,7 @@ dist/
 
 # Claude Code 実行時に生成されるレビューレポート
 .claude/reviews/
+.claude
+
+.agent/
+.agents/
