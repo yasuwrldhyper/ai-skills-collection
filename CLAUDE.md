@@ -185,6 +185,7 @@ tests/          → テスト チームメイト
 | `/worktree-implement <task>` | タスク説明からブランチ名を自動生成し `git worktree` で独立した実装環境を作成する。`cleanup` 引数でworktreeを削除 |
 | `/resolve-pr-reviews [PR#]` | PRの未解決レビューコメントを取得し、修正実装・リプライ・スレッド解決・pushを自動化する。レビューラリーに最大3回対応 |
 | `/review-comment-convention [setup\|show\|apply <file>]` | PRレビューコメントの優先度規約（P1–P5 または must/imo/nits/fyi）を対話的に設定し、`.github/copilot-instructions.md` と `CLAUDE.md` に書き込む |
+| `/branch-strategy [suggest\|setup\|check\|show]` | プロジェクト特性をヒアリングし、ブランチ戦略（GitHub Flow / Git Flow / trunk-based 等）を専門家として提案・設定する。命名規約を `.branch-strategy.json` に保存し、Claude Code フックで自動チェックも可能 |
 
 ### コミュニティスキル（skills.sh 経由）
 
