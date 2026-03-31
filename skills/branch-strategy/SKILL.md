@@ -26,7 +26,7 @@ allowed-tools: Read, Write, Edit, Glob, Bash, AskUserQuestion
 
 ## ブランチ戦略の知識体系
 
-このスキルを実行する際、以下の知識を専門家として活用する。決定マトリクスで機械的に選ぶのではなく、プロジェクトの状況を理解した上で「なぜこの戦略が適切か」を文脈と共に提案すること。
+このスキルは **ブランチ戦略の専門家** として動作する。決定マトリクスで機械的に選ぶのではなく、プロジェクトの状況を理解した上で「なぜこの戦略が適切か」を文脈・根拠と共に提案すること。提案には必ず参考ソース（公式ドキュメント・企業事例）を添えて、思い込みではなく実績ある知見に基づく提案であることを示す。
 
 ### 5つの基本戦略
 
@@ -35,33 +35,47 @@ allowed-tools: Read, Write, Edit, Glob, Bash, AskUserQuestion
 - `main` は常にデプロイ可能。feature → PR → `main` のシンプルなフロー
 - 適合: 小〜中規模チーム、継続的デプロイ、SaaS プロダクト
 - 注意: リリース管理が不要な場合向け。複数バージョン並行は不得意
+- 参考: [GitHub Flow 公式ドキュメント](https://docs.github.com/en/get-started/using-github/github-flow)、Scott Chacon (2011) "GitHub Flow"
+- 採用例: GitHub 社内、Shopify（+ feature flag）、多くの小〜中規模 SaaS
 
 **Git Flow**
 - ブランチ: `main`, `develop`, `feature/*`, `release/*`, `hotfix/*`
 - 厳格なマージ規律が必要。`develop` がインテグレーションポイント
 - 適合: バージョン管理が必要なソフトウェア、複数バージョン並行メンテ
-- 注意: 大規模チームでは `develop` がボトルネックになりマージ競合が頻発
+- 注意: 大規模チームでは `develop` がボトルネックになりマージ競合が頻発。作者自身も「常に正解ではない」と注記
+- 参考: Vincent Driessen (2010) "[A successful Git branching model](https://nvie.com/posts/a-successful-git-branching-model/)"
+- 採用例: 従来型ソフトウェア開発、パッケージ配布が必要なOSS
 
 **Trunk-based Development**
 - ブランチ: `main` + 非常に短命なブランチ（1〜2日で main にマージ）
 - feature flag で未完成機能を隠す。高頻度のインテグレーションが前提
 - 適合: 高成熟CI/CD 環境、少人数精鋭チーム、高速イテレーション
 - 注意: CI/CD が未成熟だと壊れた main が頻発する。feature flag 管理コストも発生
+- 参考: Paul Hammant [trunkbaseddevelopment.com](https://trunkbaseddevelopment.com)、Google Engineering Practices
+- 採用例: Google（数万人規模のモノレポ）、Meta、Microsoft（一部）、Netflix
 
 **GitLab Flow（環境ブランチ方式）**
 - ブランチ: `main` + `staging`, `production` 等の環境ブランチ
 - feature → `main` → `staging` → `production` と環境間をマージ昇格
 - 適合: 複数のデプロイ環境がある場合、リリース承認フローが必要な場合
 - **重大な制約**: 全 feature が同時昇格するため、施策ごとにローンチ時期が異なるモノレポとは相性が最悪
+- 参考: [GitLab Flow 公式ドキュメント](https://about.gitlab.com/topics/version-control/what-is-gitlab-flow/)
 
 **Release-branch**
 - ブランチ: `main` + `release/vX.Y` の長命リリースブランチ
 - 新バージョンは `main` から切り出し、bug fix は cherry-pick で適用
 - 適合: バージョンリリース形式だが `develop` ほど複雑なフローが不要な場合
+- 参考: [Python](https://devguide.python.org/developer-workflow/development-cycle/)、[Django](https://docs.djangoproject.com/en/dev/internals/release-process/)などの成熟OSSが採用
 
 ### デプロイフローオプション
 
-基本戦略に重ねて選択する（選択しない場合は `null`）:
+基本戦略の上に重ねて選択する。以下の比較を参考に、ヒアリング内容から適切なものを選ぶ:
+
+| オプション | 適合条件 | 主な制約 |
+|----------|---------|---------|
+| なし（戦略に準拠） | デプロイはブランチのマージで完結する | — |
+| 環境ブランチ方式 | 全機能が同時に各環境を通過する・ポリレポ・単一サービス | モノレポ + 独立ローンチでは全施策一括昇格になり破綻 |
+| タグ + デプロイトリガー方式 | 独立した施策/コンポーネントごとにリリース判断が必要・GitHub Releases と連携したい | CI/CD パイプラインにタグトリガーの設定が必要 |
 
 **環境ブランチ方式** (`"environment-branches"`)
 ```
@@ -75,19 +89,29 @@ develop
   ↑ merge
 feat/xxx
 ```
-「承認者が環境間のマージを実施」という運用に向く。**ただしモノレポで施策ローンチ時期が独立している場合は禁止**（全施策が一括で昇格してしまう）。
+承認者が環境間のマージを実施する運用に向く。**ただしモノレポで施策ローンチ時期が独立している場合は禁止**（全施策が一括で昇格してしまう）。
 
 **タグ + デプロイトリガー方式** (`"tag-deploy"`)
 ```
-main(常にデプロイ可能)
+main（常にデプロイ可能）
   ↑ merge
 feat/xxx
 
-tag: v1.0.0-rc.1 → QA 環境にデプロイ
-tag: v1.0.0-rc.2 → Staging 環境にデプロイ
-tag: v1.0.0      → 本番デプロイ
+タグ付け → GitHub Release 作成 → CI/CD トリガー:
+  v1.0.0-rc.1  → QA 環境にデプロイ
+  v1.0.0-rc.2  → Staging 環境にデプロイ
+  v1.0.0       → 本番デプロイ + GitHub Release（変更内容を記載）
 ```
-ブランチはシンプルに保ちつつ、タグで環境を制御。モノレポにも対応しやすい。
+GitHub を使っている場合は **GitHub Releases** を活用する:
+- タグに対応する Release を作成し、changelog / breaking changes を記録
+- `gh release create v1.0.0 --generate-notes` で自動要約も可能
+- ステークホルダーへの告知、過去バージョンの参照に使える
+
+モノレポでコンポーネント単位の独立デプロイが必要な場合はタグにプレフィックスを付ける:
+```
+salesforce/v1.2.0  → salesforce/ ディレクトリ変更のデプロイ
+ga4/v0.5.0        → ga4/ ディレクトリ変更のデプロイ
+```
 
 ### アンチパターン（避けるべき組み合わせ）
 
@@ -100,6 +124,32 @@ tag: v1.0.0      → 本番デプロイ
 | CI/CD が手動またはテストが薄い | trunk-based | 壊れたコードが `main` に入りやすい | GitHub Flow（PRで保護） |
 | 複数バージョンを同時メンテ | GitHub Flow / trunk-based | リリースブランチの管理が不可能 | Git Flow or release-branch |
 
+### IaC（Terraform等）が含まれる場合の考慮事項
+
+インフラコードが同リポジトリに含まれる場合、以下を判断材料に加える:
+
+**アプリ + Terraform が同一リポジトリの場合:**
+- ブランチ戦略はアプリコードと同じで良いが、CI/CD の **パスフィルタ**（`paths: terraform/**`）でインフラ変更時のみ Terraform ワークフローが起動するよう分離する
+- Terraform は Plan → Apply の2段階が必要なため、デプロイフローが複雑になりやすい
+- データプラットフォームのモノレポでは **コンポーネント（データソース）単位でモジュール分離**すること:
+  ```
+  terraform/
+    modules/
+      salesforce/    # salesforce データソース用モジュール
+      ga4/           # GA4 データソース用モジュール
+      bigquery-export/
+    environments/
+      dev/
+      stg/
+      prod/
+  ```
+  この構造にすると、`paths: terraform/modules/salesforce/**` のパスフィルタでデータソースごとに独立したインフラデプロイが可能になる
+
+**アプリ + Terraform が別リポジトリの場合（推奨）:**
+- インフラリポジトリは独立したブランチ戦略を持てる
+- アプリのリリースとインフラ変更が分離されるため、それぞれに最適なフロー（例: アプリはGitHub Flow + タグデプロイ、インフラはPR→レビュー→main マージ）を採用できる
+- ただしクロスリポジトリの依存関係（APIの変更とインフラの変更を同時にリリースしたい等）の管理が必要
+
 ---
 
 ## Phase 1: ヒアリング
@@ -109,7 +159,7 @@ tag: v1.0.0      → 本番デプロイ
 ### 1-1. 初回ヒアリング
 
 AskUserQuestion で以下を1度に質問:
-- プロダクトの種類（Web API / フロントエンド含む Web アプリ / ライブラリ / モバイルバックエンド / その他）
+- プロダクトの種類（Web API / フロントエンド含む Web アプリ / ライブラリ / データ基盤 / モバイルバックエンド / その他）
 - リポジトリ構成（モノレポ / ポリレポ / 単一サービス）
 - チーム規模（ソロ / 2-5人 / 6-15人 / 15人以上）
 
@@ -119,7 +169,9 @@ AskUserQuestion で以下を1度に質問:
 
 以下の観点で情報が不足していれば質問する:
 - **モノレポの場合**: 施策・機能のローンチ時期は同期（全機能同時リリース）か独立（機能ごとに別タイミング）か？
+- **インフラコード**: Terraform等のIaCはアプリコードと同一リポジトリか別リポジトリか？
 - **デプロイ環境**: QA / ステージング / 本番 など何段階あるか？環境ごとに承認フローがあるか？
+- **Git ホスティング**: GitHub / GitLab / その他？（GitHub Releases, GitHub Actions 等の機能を活用できるか）
 - **リリース頻度**: 随時デプロイ / 週次・月次定期リリース / バージョン番号管理（semver等）
 - **CI/CD 成熟度**: 手動デプロイ / 基本的なCIはある / フルCI/CDで自動デプロイ
 - **ホットフィックス**: 本番の緊急修正が必要になる頻度？（高い場合は `hotfix/` ブランチが必要）
@@ -138,7 +190,9 @@ AskUserQuestion で以下を1度に質問:
 3. **避けた選択肢** - 検討したが選ばなかった戦略と、その理由（特にアンチパターンに該当する場合は明示的に説明）
 4. **ブランチトポロジー** - ASCII図で可視化
 5. **命名規約テーブル** - ブランチプレフィックスと用途
-6. **トレードオフと注意点**
+6. **デプロイフロー説明** - 採用するデプロイフローのオプション・向き不向きを明示（GitHub を使っている場合は GitHub Releases の活用も提示）
+7. **参考ソース** - 採用した戦略の公式ドキュメント・企業事例・実績ある知見を1〜3件引用する
+8. **トレードオフと注意点**
 
 ### 確認
 
@@ -163,6 +217,7 @@ AskUserQuestion で以下を1度に質問:
   "strategy": "<github-flow|git-flow|trunk-based|gitlab-flow|release-branch>",
   "deployFlow": "<null|environment-branches|tag-deploy>",
   "repoType": "<single|monorepo|polyrepo>",
+  "infraRepo": "<same|separate|none>",
   "mainBranch": "main",
   "developBranch": "<null|develop>",
   "environmentBranches": [],
@@ -199,6 +254,7 @@ AskUserQuestion で以下を1度に質問:
 Strategy: <戦略名>
 Deploy flow: <フロー名 or なし>
 Repo type: <monorepo|polyrepo|single>
+Infra repo: <same|separate|none>
 
 ### Branch naming convention
 
@@ -215,6 +271,9 @@ Repo type: <monorepo|polyrepo|single>
 
 Protected branches: <list>
 Pattern: `<branchPattern>`
+
+### References
+<採用した戦略の参考ソースを記載>
 ```
 
 ---
@@ -280,13 +339,17 @@ fi
 
 CONFIG="$PROJECT_ROOT/.branch-strategy.json"
 PATTERN=$(jq -r '.branchPattern // empty' "$CONFIG")
-PROTECTED=$(jq -r '.protectedBranches[]?' "$CONFIG")
 MAX_LEN=$(jq -r '.maxBranchNameLength // 60' "$CONFIG")
 
 # Protected branches are always allowed
 while IFS= read -r pb; do
   [ "$BRANCH" = "$pb" ] && exit 0
-done <<< "$PROTECTED"
+done < <(jq -r '.protectedBranches[]?' "$CONFIG")
+
+# environmentBranches are also exempt from the naming convention
+while IFS= read -r eb; do
+  [ "$BRANCH" = "$eb" ] && exit 0
+done < <(jq -r '.environmentBranches[]?' "$CONFIG")
 
 # Exit 0 if no pattern configured
 [ -z "$PATTERN" ] && exit 0
@@ -300,11 +363,11 @@ fi
 
 # Validate pattern
 if ! echo "$BRANCH" | grep -qE "$PATTERN"; then
-  PREFIXES=$(jq -r '.branchPrefixes | to_entries[] | "\(.value)\(.key)"' "$CONFIG" 2>/dev/null | head -8 | tr '\n' ' ')
-  echo "Branch name '$BRANCH' violates convention." >&2
-  echo "Pattern: $PATTERN" >&2
-  echo "Valid prefixes: $PREFIXES" >&2
-  echo "Example: feat/your-feature-name" >&2
+  FIRST_PREFIX=$(jq -r '.branchPrefixes | to_entries[0] | .value' "$CONFIG" 2>/dev/null || echo "feat/")
+  echo "Branch name '$BRANCH' violates the convention for this project." >&2
+  echo "Required pattern: $PATTERN" >&2
+  echo "Example valid name: ${FIRST_PREFIX}your-description" >&2
+  echo "Run '/branch-strategy show' to see the full naming convention." >&2
   exit 2
 fi
 
